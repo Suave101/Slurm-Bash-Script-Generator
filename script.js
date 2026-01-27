@@ -16,6 +16,11 @@ themeToggle.addEventListener('change', function() {
 });
 
 // Script generation functionality
+/**
+ * Generates a Slurm bash script based on form input values.
+ * Reads all form fields and constructs a complete bash script with SBATCH directives.
+ * @returns {string} The generated Slurm bash script
+ */
 function generateScript() {
     const jobName = document.getElementById('job-name').value || 'my-job';
     const partition = document.getElementById('partition').value || 'normal';
@@ -87,7 +92,11 @@ function generateScript() {
     return script;
 }
 
-// Escape HTML to prevent XSS
+/**
+ * Escapes HTML special characters to prevent XSS attacks.
+ * @param {string} text - The text to escape
+ * @returns {string} The escaped text safe for HTML display
+ */
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
@@ -99,7 +108,10 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-// Copy to clipboard functionality
+/**
+ * Copies the generated script to the clipboard.
+ * Shows a success indicator on the button and handles errors gracefully.
+ */
 function copyToClipboard() {
     const outputElement = document.getElementById('output');
     const text = outputElement.textContent;
@@ -127,7 +139,10 @@ function copyToClipboard() {
     });
 }
 
-// Download script functionality
+/**
+ * Downloads the generated script as a .sh file.
+ * The filename is based on the job name from the form.
+ */
 function downloadScript() {
     const outputElement = document.getElementById('output');
     const text = outputElement.textContent;
