@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slurm Bash Script Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+            display: none;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .output-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .output-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .output-box {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .helper-text {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Slurm Bash Script Generator</h1>
+        <p class="subtitle">Configure your Slurm job parameters and generate a ready-to-use bash script</p>
+        
+        <form id="slurmForm">
+            <div class="form-group">
+                <label for="jobName">Job Name</label>
+                <input type="text" id="jobName" value="distTestassist" required>
+                <div class="helper-text">Unique identifier for your job</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="nodes">Nodes</label>
+                    <input type="number" id="nodes" value="1" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="ntasks">Tasks</label>
+                    <input type="number" id="ntasks" value="1" min="1" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="output">Output Log File</label>
+                <input type="text" id="output" value="distributionShiftAssist.log" required>
+                <div class="helper-text">File where job output will be saved</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="partition">Partition</label>
+                    <input type="text" id="partition" value="gpu2" required>
+                    <div class="helper-text">e.g., gpu2, cpu, compute</div>
+                </div>
+                <div class="form-group">
+                    <label for="gres">GPU Resources</label>
+                    <input type="text" id="gres" value="gpu:4" required>
+                    <div class="helper-text">Format: gpu:count (e.g., gpu:4)</div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="cpusPerTask">CPUs per Task</label>
+                    <input type="number" id="cpusPerTask" value="16" min="1" required>
+                    <div class="helper-text">4 per GPU is a good ratio</div>
+                </div>
+                <div class="form-group">
+                    <label for="memory">Memory</label>
+                    <input type="text" id="memory" value="128G" required>
+                    <div class="helper-text">e.g., 128G, 64G, 256G</div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="generate-btn">Generate Script</button>
+                <button type="button" id="downloadBtn" class="download-btn">Download Script</button>
+            </div>
+        </form>
+
+        <div class="output-section" id="outputSection">
+            <div class="output-label">Generated Script:</div>
+            <div class="output-box" id="outputBox"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('slurmForm');
+        const outputSection = document.getElementById('outputSection');
+        const outputBox = document.getElementById('outputBox');
+        const downloadBtn = document.getElementById('downloadBtn');
+        let generatedScript = '';
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateScript();
+        });
+
+        downloadBtn.addEventListener('click', function() {
+            downloadScript();
+        });
+
+        function generateScript() {
+            const jobName = document.getElementById('jobName').value;
+            const nodes = document.getElementById('nodes').value;
+            const ntasks = document.getElementById('ntasks').value;
+            const output = document.getElementById('output').value;
+            const partition = document.getElementById('partition').value;
+            const gres = document.getElementById('gres').value;
+            const cpusPerTask = document.getElementById('cpusPerTask').value;
+            const memory = document.getElementById('memory').value;
+
+            generatedScript = `#!/bin/bash
+
+# --- Slurm Job Configuration ---
+#SBATCH --job-name=${jobName}
+#SBATCH --nodes=${nodes}
+#SBATCH --ntasks=${ntasks}
+#SBATCH --output=${output}
+#SBATCH --partition=${partition}
+#SBATCH --gres=${gres}
+#SBATCH --cpus-per-task=${cpusPerTask}        # Request ${cpusPerTask} CPUs (4 per GPU is a good ratio)
+#SBATCH --mem=${memory}                # Increase memory to handle larger batches
+#
+
+# Your commands here
+# Example:
+# module load python/3.9
+# source activate myenv
+# python your_script.py
+`;
+
+            outputBox.textContent = generatedScript;
+            outputSection.style.display = 'block';
+            downloadBtn.style.display = 'block';
+
+            // Smooth scroll to output
+            outputSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function downloadScript() {
+            const blob = new Blob([generatedScript], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const jobName = document.getElementById('jobName').value;
+            a.href = url;
+            a.download = `${jobName}_slurm.sh`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
