@@ -23,6 +23,8 @@ themeToggle.addEventListener('change', function() {
  */
 function generateScript() {
     const jobName = document.getElementById('job-name').value || 'my-job';
+    const account = document.getElementById('account').value;
+    const qos = document.getElementById('qos').value;
     const partition = document.getElementById('partition').value || 'normal';
     const time = document.getElementById('time').value || '01:00:00';
     const nodes = document.getElementById('nodes').value || '1';
@@ -30,6 +32,7 @@ function generateScript() {
     const cpus = document.getElementById('cpus').value || '1';
     const memory = document.getElementById('memory').value || '4G';
     const gpus = document.getElementById('gpus').value || '0';
+    const workdir = document.getElementById('workdir').value;
     const email = document.getElementById('email').value;
     const mailBegin = document.getElementById('mail-begin').checked;
     const mailEnd = document.getElementById('mail-end').checked;
@@ -38,23 +41,33 @@ function generateScript() {
     const commands = document.getElementById('commands').value;
 
     let script = '#!/bin/bash\n\n';
-    script += `#SBATCH --job-name=${jobName}\n`;
-    script += `#SBATCH --partition=${partition}\n`;
-    script += `#SBATCH --time=${time}\n`;
-    script += `#SBATCH --nodes=${nodes}\n`;
-    script += `#SBATCH --ntasks-per-node=${ntasks}\n`;
-    script += `#SBATCH --cpus-per-task=${cpus}\n`;
-    script += `#SBATCH --mem-per-cpu=${memory}\n`;
+    script += `#SBATCH --job-name='${escapeShell(jobName)}'\n`;
+    
+    if (account) {
+        script += `#SBATCH --account='${escapeShell(account)}'\n`;
+    }
+    
+    script += `#SBATCH --partition='${escapeShell(partition)}'\n`;
+    
+    if (qos) {
+        script += `#SBATCH --qos='${escapeShell(qos)}'\n`;
+    }
+    
+    script += `#SBATCH --time='${escapeShell(time)}'\n`;
+    script += `#SBATCH --nodes='${escapeShell(nodes)}'\n`;
+    script += `#SBATCH --ntasks-per-node='${escapeShell(ntasks)}'\n`;
+    script += `#SBATCH --cpus-per-task='${escapeShell(cpus)}'\n`;
+    script += `#SBATCH --mem-per-cpu='${escapeShell(memory)}'\n`;
 
     if (gpus && parseInt(gpus) > 0) {
-        script += `#SBATCH --gres=gpu:${gpus}\n`;
+        script += `#SBATCH --gres=gpu:'${escapeShell(gpus)}'\n`;
     }
 
     script += `#SBATCH --output=%x-%j.out\n`;
     script += `#SBATCH --error=%x-%j.err\n`;
 
     if (email) {
-        script += `#SBATCH --mail-user=${email}\n`;
+        script += `#SBATCH --mail-user='${escapeShell(email)}'\n`;
         const mailTypes = [];
         if (mailBegin) mailTypes.push('BEGIN');
         if (mailEnd) mailTypes.push('END');
@@ -64,32 +77,64 @@ function generateScript() {
         }
     }
 
-    script += '\n# Job information\n';
+    script += '\n# Set working directory (if specified)\n';
+    if (workdir) {
+        script += `cd '${escapeShell(workdir)}' || exit 1\n`;
+    }
+    script += '\n';
+
+    script += '# Job information\n';
+    script += 'echo "========================================"\n';
     script += 'echo "Job started on $(date)"\n';
-    script += 'echo "Running on node: $SLURM_NODELIST"\n';
     script += 'echo "Job ID: $SLURM_JOB_ID"\n';
+    script += 'echo "Running on node(s): $SLURM_NODELIST"\n';
+    script += 'echo "Working directory: $(pwd)"\n';
+    script += 'echo "========================================"\n';
     script += 'echo ""\n\n';
 
     if (modules) {
-        script += '# Load modules\n';
+        script += '# Purge and load modules\n';
+        script += '# Note: module purge may unload system modules; remove if not desired\n';
+        script += 'module purge\n';
         const moduleList = modules.split('\n').filter(m => m.trim());
         moduleList.forEach(module => {
-            script += `module load ${module.trim()}\n`;
+            script += `module load '${escapeShell(module.trim())}'\n`;
         });
-        script += '\n';
+        script += 'echo "Loaded modules:"\n';
+        script += 'module list 2>&1\n';
+        script += 'echo ""\n\n';
     }
 
     if (commands) {
         script += '# Execute commands\n';
+        script += '# WARNING: Commands are executed as-is without escaping\n';
         script += commands.trim() + '\n\n';
     }
 
-    script += '# Job completion\n';
+    script += '# Job completion and resource usage\n';
     script += 'echo ""\n';
+    script += 'echo "========================================"\n';
     script += 'echo "Job completed on $(date)"\n';
+    script += 'echo "========================================"\n';
+    script += '\n# Display resource usage (wait for accounting data to be available)\n';
+    script += '# Note: Delay is system-dependent; increase if data is not available\n';
+    script += 'sleep 5\n';
+    script += 'sacct -j "$SLURM_JOB_ID" --format=JobID,JobName,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize 2>/dev/null || echo "Resource usage data not yet available"\n';
 
     document.getElementById('output').innerHTML = `<code>${escapeHtml(script)}</code>`;
     return script;
+}
+
+/**
+ * Escapes shell special characters to prevent command injection.
+ * @param {string} text - The text to escape
+ * @returns {string} The escaped text safe for shell use
+ */
+function escapeShell(text) {
+    // Handle null or undefined inputs
+    if (!text) return '';
+    // For Slurm directives and shell commands, wrap in single quotes and escape any single quotes
+    return String(text).replace(/'/g, "'\\''");
 }
 
 /**
