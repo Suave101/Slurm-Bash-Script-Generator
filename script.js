@@ -41,16 +41,16 @@ function generateScript() {
     const commands = document.getElementById('commands').value;
 
     let script = '#!/bin/bash\n\n';
-    script += `#SBATCH --job-name=${jobName}\n`;
+    script += `#SBATCH --job-name='${escapeShell(jobName)}'\n`;
     
     if (account) {
-        script += `#SBATCH --account=${account}\n`;
+        script += `#SBATCH --account='${escapeShell(account)}'\n`;
     }
     
-    script += `#SBATCH --partition=${partition}\n`;
+    script += `#SBATCH --partition='${escapeShell(partition)}'\n`;
     
     if (qos) {
-        script += `#SBATCH --qos=${qos}\n`;
+        script += `#SBATCH --qos='${escapeShell(qos)}'\n`;
     }
     
     script += `#SBATCH --time=${time}\n`;
@@ -79,7 +79,7 @@ function generateScript() {
 
     script += '\n# Set working directory (if specified)\n';
     if (workdir) {
-        script += `cd ${workdir} || exit 1\n`;
+        script += `cd '${escapeShell(workdir)}' || exit 1\n`;
     }
     script += '\n';
 
@@ -94,10 +94,11 @@ function generateScript() {
 
     if (modules) {
         script += '# Purge and load modules\n';
+        script += '# Note: module purge may unload system modules; remove if not desired\n';
         script += 'module purge\n';
         const moduleList = modules.split('\n').filter(m => m.trim());
         moduleList.forEach(module => {
-            script += `module load ${module.trim()}\n`;
+            script += `module load '${escapeShell(module.trim())}'\n`;
         });
         script += 'echo "Loaded modules:"\n';
         script += 'module list\n';
@@ -114,11 +115,22 @@ function generateScript() {
     script += 'echo "========================================"\n';
     script += 'echo "Job completed on $(date)"\n';
     script += 'echo "========================================"\n';
-    script += '\n# Display resource usage\n';
-    script += 'sacct -j $SLURM_JOB_ID --format=JobID,JobName,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize\n';
+    script += '\n# Display resource usage (wait for accounting data to be available)\n';
+    script += 'sleep 2\n';
+    script += 'sacct -j $SLURM_JOB_ID --format=JobID,JobName,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize 2>/dev/null || echo "Resource usage data not yet available"\n';
 
     document.getElementById('output').innerHTML = `<code>${escapeHtml(script)}</code>`;
     return script;
+}
+
+/**
+ * Escapes shell special characters to prevent command injection.
+ * @param {string} text - The text to escape
+ * @returns {string} The escaped text safe for shell use
+ */
+function escapeShell(text) {
+    // For Slurm directives and shell commands, wrap in single quotes and escape any single quotes
+    return text.replace(/'/g, "'\\''");
 }
 
 /**
