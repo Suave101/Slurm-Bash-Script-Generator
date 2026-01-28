@@ -53,21 +53,21 @@ function generateScript() {
         script += `#SBATCH --qos='${escapeShell(qos)}'\n`;
     }
     
-    script += `#SBATCH --time=${time}\n`;
-    script += `#SBATCH --nodes=${nodes}\n`;
-    script += `#SBATCH --ntasks-per-node=${ntasks}\n`;
-    script += `#SBATCH --cpus-per-task=${cpus}\n`;
-    script += `#SBATCH --mem-per-cpu=${memory}\n`;
+    script += `#SBATCH --time='${escapeShell(time)}'\n`;
+    script += `#SBATCH --nodes='${escapeShell(nodes)}'\n`;
+    script += `#SBATCH --ntasks-per-node='${escapeShell(ntasks)}'\n`;
+    script += `#SBATCH --cpus-per-task='${escapeShell(cpus)}'\n`;
+    script += `#SBATCH --mem-per-cpu='${escapeShell(memory)}'\n`;
 
     if (gpus && parseInt(gpus) > 0) {
-        script += `#SBATCH --gres=gpu:${gpus}\n`;
+        script += `#SBATCH --gres=gpu:'${escapeShell(gpus)}'\n`;
     }
 
     script += `#SBATCH --output=%x-%j.out\n`;
     script += `#SBATCH --error=%x-%j.err\n`;
 
     if (email) {
-        script += `#SBATCH --mail-user=${email}\n`;
+        script += `#SBATCH --mail-user='${escapeShell(email)}'\n`;
         const mailTypes = [];
         if (mailBegin) mailTypes.push('BEGIN');
         if (mailEnd) mailTypes.push('END');
@@ -101,12 +101,13 @@ function generateScript() {
             script += `module load '${escapeShell(module.trim())}'\n`;
         });
         script += 'echo "Loaded modules:"\n';
-        script += 'module list\n';
+        script += 'module list 2>&1\n';
         script += 'echo ""\n\n';
     }
 
     if (commands) {
         script += '# Execute commands\n';
+        script += '# WARNING: Commands are executed as-is without escaping\n';
         script += commands.trim() + '\n\n';
     }
 
@@ -116,8 +117,9 @@ function generateScript() {
     script += 'echo "Job completed on $(date)"\n';
     script += 'echo "========================================"\n';
     script += '\n# Display resource usage (wait for accounting data to be available)\n';
-    script += 'sleep 2\n';
-    script += 'sacct -j $SLURM_JOB_ID --format=JobID,JobName,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize 2>/dev/null || echo "Resource usage data not yet available"\n';
+    script += '# Note: Delay is system-dependent; increase if data is not available\n';
+    script += 'sleep 5\n';
+    script += 'sacct -j "$SLURM_JOB_ID" --format=JobID,JobName,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize 2>/dev/null || echo "Resource usage data not yet available"\n';
 
     document.getElementById('output').innerHTML = `<code>${escapeHtml(script)}</code>`;
     return script;
@@ -129,8 +131,10 @@ function generateScript() {
  * @returns {string} The escaped text safe for shell use
  */
 function escapeShell(text) {
+    // Handle null or undefined inputs
+    if (!text) return '';
     // For Slurm directives and shell commands, wrap in single quotes and escape any single quotes
-    return text.replace(/'/g, "'\\''");
+    return String(text).replace(/'/g, "'\\''");
 }
 
 /**
