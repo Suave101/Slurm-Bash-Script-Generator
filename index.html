@@ -43,6 +43,28 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div class="form-control w-full">
                                 <label class="label">
+                                    <span class="label-text font-semibold">Account/Project</span>
+                                </label>
+                                <input type="text" id="account" placeholder="my-project" class="input input-bordered w-full" />
+                                <label class="label">
+                                    <span class="label-text-alt">Required by many HPC centers</span>
+                                </label>
+                            </div>
+
+                            <div class="form-control w-full">
+                                <label class="label">
+                                    <span class="label-text font-semibold">QOS (optional)</span>
+                                </label>
+                                <input type="text" id="qos" placeholder="normal" class="input input-bordered w-full" />
+                                <label class="label">
+                                    <span class="label-text-alt">Quality of Service</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="form-control w-full">
+                                <label class="label">
                                     <span class="label-text font-semibold">Partition</span>
                                 </label>
                                 <input type="text" id="partition" placeholder="normal" class="input input-bordered w-full" value="normal" />
@@ -57,6 +79,16 @@
                                     <span class="label-text-alt">Format: HH:MM:SS</span>
                                 </label>
                             </div>
+                        </div>
+
+                        <div class="form-control w-full mb-4">
+                            <label class="label">
+                                <span class="label-text font-semibold">Working Directory</span>
+                            </label>
+                            <input type="text" id="workdir" placeholder="/home/user/project" class="input input-bordered w-full" />
+                            <label class="label">
+                                <span class="label-text-alt">Directory where job will run (uses current dir if not specified)</span>
+                            </label>
                         </div>
 
                         <!-- Resource Settings -->

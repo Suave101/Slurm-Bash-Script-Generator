@@ -23,6 +23,8 @@ themeToggle.addEventListener('change', function() {
  */
 function generateScript() {
     const jobName = document.getElementById('job-name').value || 'my-job';
+    const account = document.getElementById('account').value;
+    const qos = document.getElementById('qos').value;
     const partition = document.getElementById('partition').value || 'normal';
     const time = document.getElementById('time').value || '01:00:00';
     const nodes = document.getElementById('nodes').value || '1';
@@ -30,6 +32,7 @@ function generateScript() {
     const cpus = document.getElementById('cpus').value || '1';
     const memory = document.getElementById('memory').value || '4G';
     const gpus = document.getElementById('gpus').value || '0';
+    const workdir = document.getElementById('workdir').value;
     const email = document.getElementById('email').value;
     const mailBegin = document.getElementById('mail-begin').checked;
     const mailEnd = document.getElementById('mail-end').checked;
@@ -39,7 +42,17 @@ function generateScript() {
 
     let script = '#!/bin/bash\n\n';
     script += `#SBATCH --job-name=${jobName}\n`;
+    
+    if (account) {
+        script += `#SBATCH --account=${account}\n`;
+    }
+    
     script += `#SBATCH --partition=${partition}\n`;
+    
+    if (qos) {
+        script += `#SBATCH --qos=${qos}\n`;
+    }
+    
     script += `#SBATCH --time=${time}\n`;
     script += `#SBATCH --nodes=${nodes}\n`;
     script += `#SBATCH --ntasks-per-node=${ntasks}\n`;
@@ -64,19 +77,31 @@ function generateScript() {
         }
     }
 
-    script += '\n# Job information\n';
+    script += '\n# Set working directory (if specified)\n';
+    if (workdir) {
+        script += `cd ${workdir} || exit 1\n`;
+    }
+    script += '\n';
+
+    script += '# Job information\n';
+    script += 'echo "========================================"\n';
     script += 'echo "Job started on $(date)"\n';
-    script += 'echo "Running on node: $SLURM_NODELIST"\n';
     script += 'echo "Job ID: $SLURM_JOB_ID"\n';
+    script += 'echo "Running on node(s): $SLURM_NODELIST"\n';
+    script += 'echo "Working directory: $(pwd)"\n';
+    script += 'echo "========================================"\n';
     script += 'echo ""\n\n';
 
     if (modules) {
-        script += '# Load modules\n';
+        script += '# Purge and load modules\n';
+        script += 'module purge\n';
         const moduleList = modules.split('\n').filter(m => m.trim());
         moduleList.forEach(module => {
             script += `module load ${module.trim()}\n`;
         });
-        script += '\n';
+        script += 'echo "Loaded modules:"\n';
+        script += 'module list\n';
+        script += 'echo ""\n\n';
     }
 
     if (commands) {
@@ -84,9 +109,13 @@ function generateScript() {
         script += commands.trim() + '\n\n';
     }
 
-    script += '# Job completion\n';
+    script += '# Job completion and resource usage\n';
     script += 'echo ""\n';
+    script += 'echo "========================================"\n';
     script += 'echo "Job completed on $(date)"\n';
+    script += 'echo "========================================"\n';
+    script += '\n# Display resource usage\n';
+    script += 'sacct -j $SLURM_JOB_ID --format=JobID,JobName,Partition,AllocCPUS,State,ExitCode,Elapsed,MaxRSS,MaxVMSize\n';
 
     document.getElementById('output').innerHTML = `<code>${escapeHtml(script)}</code>`;
     return script;
